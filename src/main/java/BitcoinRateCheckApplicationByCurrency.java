@@ -1,110 +1,116 @@
 import org.json.JSONObject;
+import util.APIUtil;
+import util.ListUtil;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
 import static java.lang.System.out;
 
 public class BitcoinRateCheckApplicationByCurrency {
-    public static final String URL = "https://api.coindesk.com/v1/bpi/currentprice.json";
-    public static JSONObject jsonAPIresponseObject = null;
+
+    public static final String currencyPriceAPIGetURL = "https://api.coindesk.com/v1/bpi/currentprice.json";
+
+    public static JSONObject currencyPriceAPIResponse = null;
+
+    public static String currency = null;
+
+    public static Double bitcoinRateInRequestedCurrency = null;
+
+    public static final String dateFormat = "yyyy-MM-dd";
+
+    public static final int forHowManyLastDayWeWantToSeeData = 30;
+
+    public static ArrayList<Double> priceListForDateRange = null;
+
 
     public static void main(String[] args) throws IOException {
-        jsonAPIresponseObject = getJSONAPIdataFromURL(URL);
+        displayInformationFromAPI();
+    }
+
+    static void displayInformationFromAPI() throws IOException {
+
+        getCurrencypriceAPIResponse();
+        while(true){
+
+            requestUserForInput();
+
+            if(currencyCodenotSupported()){
+                out.println("Something went wrong or the currency code is not supported by the API. try(USD, EUR, GBP, etc.)");
+                continue;
+            }
+            getInformationFromAPI();
+
+            showInformation();
+        }
+    }
+    static void getCurrencypriceAPIResponse() throws IOException {
+        currencyPriceAPIResponse = APIUtil.getJSONAPIdataFromURL(currencyPriceAPIGetURL);
+    }
+    static void requestUserForInput() throws IOException {
         out.println("Input a currency code (USD, EUR, GBP, etc.)");
-        ;
         Scanner scanner = new Scanner(System.in);
-        String currency = scanner.nextLine();
+        currency = scanner.nextLine();
 
-        JSONObject bpiObject = (JSONObject) jsonAPIresponseObject.get("bpi");
+    }
 
+    public static boolean currencyCodenotSupported(){
+        if(currencyPriceAPIResponse == null) return true;
+        if(currencyPriceAPIResponse.get("bpi") == null) return true;
+        if(!((JSONObject) currencyPriceAPIResponse.get("bpi")).has(currency)) return true;
+
+        return false;
+    }
+
+    public static void getInformationFromAPI() throws IOException {
+
+
+        JSONObject bpiObject = (JSONObject) currencyPriceAPIResponse.get("bpi");
         JSONObject currencyDataObject = (JSONObject) bpiObject.get(currency);
 
-        Double currentRate = (Double) currencyDataObject.get("rate_float");
 
-        Date dNow = new Date();
-
-        SimpleDateFormat ft = new SimpleDateFormat("yyyy-MM-dd");
-
-        System.out.println("Current Date: " + ft.format(dNow));
-
-        Calendar cal = Calendar.getInstance();
-        cal.setTime(new Date());
-        cal.add(Calendar.DATE, -30);
-        Date dateBefore30Days = cal.getTime();
-
-
-        String currentDate = ft.format(dNow);
-        String fromDate = ft.format(dateBefore30Days);
-
-        String apiDataRangeURL = "https://api.coindesk.com/v1/bpi/historical/close.json?start=" + fromDate + "&end=" + currentDate + "&?currency=" + currency;
-        JSONObject lastOneMonthDataObject = getJSONAPIdataFromURL(apiDataRangeURL);
-
-        JSONObject obj = (JSONObject) lastOneMonthDataObject.get("bpi");
-
-        Set<String> keySet = obj.keySet();
-        ArrayList<Double> priceListForDateRange = new ArrayList<Double>();
-        for (String x : keySet) {
-            double price = (Double) obj.get(x);
+        bitcoinRateInRequestedCurrency = (Double) currencyDataObject.get("rate_float");
+        String apiDataRangeURL = urlBuilderToGetLast30DaysInformation();
+        JSONObject lastOneMonthDataObject = APIUtil.getJSONAPIdataFromURL(apiDataRangeURL);
+        JSONObject priceObjectForLastmonth = (JSONObject) lastOneMonthDataObject.get("bpi");
+        Set<String> dateSet = priceObjectForLastmonth.keySet();
+        priceListForDateRange = new ArrayList<Double>();
+        for (String date : dateSet) {
+            double price = (Double) priceObjectForLastmonth.get(date);
             priceListForDateRange.add(price);
         }
-
-
-        out.println("- The current Bitcoin rate, in the requested currency: " + currentRate);
-        out.println("- The lowest Bitcoin rate in the last 30 days, in the requested currency: " + getMinValue(priceListForDateRange));
-        out.println("- The highest Bitcoin rate in the last 30 days, in the requested currency: " + getMaxValue(priceListForDateRange));
-
-
     }
 
-    public static JSONObject getJSONAPIdataFromURL(String url) throws IOException {
-        JSONObject responseJSON = null;
-        URL urlForGetRequest = new URL(url);
-        String readLine = null;
-        HttpURLConnection conection = (HttpURLConnection) urlForGetRequest.openConnection();
-        conection.setRequestMethod("GET");
-//        conection.setRequestProperty("userId", "a1bcdef"); // set userId its a sample here
-        int responseCode = conection.getResponseCode();
-        if (responseCode == HttpURLConnection.HTTP_OK) {
-            BufferedReader in = new BufferedReader(
-                    new InputStreamReader(conection.getInputStream()));
-            StringBuffer response = new StringBuffer();
-            while ((readLine = in.readLine()) != null) {
-                response.append(readLine);
-            }
-            in.close();
-//            System.out.println("JSON String Result " + response.toString());
-            //GetAndPost.POSTRequest(response.toString());
-            responseJSON = new JSONObject(response.toString());
-        } else {
-            System.out.println("GET NOT WORKED");
-        }
-        return responseJSON;
+    public static String urlBuilderToGetLast30DaysInformation(){
+        Date fromday = getNdaysBeforeDataFromCurrentDate(forHowManyLastDayWeWantToSeeData);
+        Date today = new Date();
+
+        String currentDate = getDateInSpecificFormat(today,dateFormat);
+        String fromDate = getDateInSpecificFormat(fromday, dateFormat);
+
+        String apiDataRangeURL = "https://api.coindesk.com/v1/bpi/historical/close.json?start=" + fromDate + "&end=" + currentDate + "&?currency=" + currency;
+
+        return apiDataRangeURL;
     }
 
-    public static double getMaxValue(ArrayList<Double> numbers) {
-
-        double maxValue = numbers.get(0);
-        for (int i = 1; i < numbers.size(); i++) {
-            if (numbers.get(i) > maxValue) {
-                maxValue = numbers.get(i);
-            }
-        }
-        return maxValue;
+    public static Date getNdaysBeforeDataFromCurrentDate(int n){
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(new Date());
+        cal.add(Calendar.DATE, -n);
+        Date dateBefore30Days = cal.getTime();
+        return dateBefore30Days;
     }
 
-    public static double getMinValue(ArrayList<Double> numbers) {
-        double minValue = numbers.get(0);
-        for (int i = 1; i < numbers.size(); i++) {
-            if (numbers.get(i) < minValue) {
-                minValue = numbers.get(i);
-            }
-        }
-        return minValue;
+    public static String getDateInSpecificFormat(Date date, String format){
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(format);
+        return simpleDateFormat.format(date);
     }
+
+    public static void showInformation(){
+        out.println("- The current Bitcoin rate, in the requested currency: " + bitcoinRateInRequestedCurrency);
+        out.println("- The lowest Bitcoin rate in the last 30 days, in the requested currency: " + ListUtil.getMinValue(priceListForDateRange));
+        out.println("- The highest Bitcoin rate in the last 30 days, in the requested currency: " + ListUtil.getMaxValue(priceListForDateRange));
+    }
+
 }
