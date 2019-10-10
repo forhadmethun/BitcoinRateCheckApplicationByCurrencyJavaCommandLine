@@ -28,7 +28,11 @@ public class APIUtil {
             in.close();
             responseJSON = new JSONObject(response.toString());
         } else {
-            System.out.println("GET NOT WORKED");
+            try {
+                throw new Exception("Something Went Wrong. Cannot parse data from API.");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
         return responseJSON;
