@@ -1,9 +1,14 @@
 import org.json.JSONObject;
 import util.APIUtil;
+
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.DoubleSummaryStatistics;
+import java.util.List;
+import java.util.Scanner;
+import java.util.Set;
+import java.util.ArrayList;
 
 public class BitcoinRateCheckApplicationByCurrency {
 
@@ -11,8 +16,6 @@ public class BitcoinRateCheckApplicationByCurrency {
     public static JSONObject currencyPriceAPIResponse = null;
     public static String currency = null;
     public static Double bitcoinRateInRequestedCurrency = null;
-    public static final String dateFormat = "yyyy-MM-dd";
-    public static final int forHowManyLastDayWeWantToSeeData = 30;
     public static List<Double> priceListForDateRange = null;
 
 
@@ -23,11 +26,11 @@ public class BitcoinRateCheckApplicationByCurrency {
     static void displayInformationFromAPI() throws IOException {
 
         getCurrencypriceAPIResponse();
-        while(true){
+        while (true) {
 
             requestUserForInput();
 
-            if(currencyCodenotSupportedOrAPIResponseIsNull()){
+            if (currencyCodenotSupportedOrAPIResponseIsNull()) {
                 System.out.println("Something went wrong or the currency code is not supported by the API. try(USD, EUR, GBP, etc.)");
                 continue;
             }
@@ -36,25 +39,30 @@ public class BitcoinRateCheckApplicationByCurrency {
             showInformation();
         }
     }
-    static void getCurrencypriceAPIResponse() throws IOException {
+
+    public static void getCurrencypriceAPIResponse() throws IOException {
         currencyPriceAPIResponse = APIUtil.getJSONAPIdataFromURL(currencyPriceAPIGetURL);
     }
-    static void requestUserForInput() throws IOException {
+
+    public static void requestUserForInput() throws IOException {
         System.out.println("Input a currency code (USD, EUR, GBP, etc.)");
         Scanner scanner = new Scanner(System.in);
         currency = scanner.nextLine();
 
     }
-    static boolean currencyCodenotSupportedOrAPIResponseIsNull(){
-        if(checkIfCurrencyPriceApiResponseIsNull())return true;
-        if(!((JSONObject) currencyPriceAPIResponse.get("bpi")).has(currency)) return true;
+
+    public static boolean currencyCodenotSupportedOrAPIResponseIsNull() {
+        if (checkIfCurrencyPriceApiResponseIsNull()) return true;
+        if (!((JSONObject) currencyPriceAPIResponse.get("bpi")).has(currency)) return true;
         return false;
     }
-    static boolean checkIfCurrencyPriceApiResponseIsNull(){
-        if(currencyPriceAPIResponse == null) return true;
-        if(currencyPriceAPIResponse.get("bpi") == null) return true;
+
+    static boolean checkIfCurrencyPriceApiResponseIsNull() {
+        if (currencyPriceAPIResponse == null) return true;
+        if (currencyPriceAPIResponse.get("bpi") == null) return true;
         return false;
     }
+
     static void getInformationFromAPI() throws IOException {
 
 
@@ -73,7 +81,8 @@ public class BitcoinRateCheckApplicationByCurrency {
             priceListForDateRange.add(price);
         }
     }
-    static String urlBuilderToGetLast30DaysInformation(){
+
+    static String urlBuilderToGetLast30DaysInformation() {
 
         DateTimeFormatter isoLocalDateFormatter = DateTimeFormatter.ISO_LOCAL_DATE;
 
@@ -87,12 +96,13 @@ public class BitcoinRateCheckApplicationByCurrency {
 
         return apiDataRangeURL;
     }
-    static void showInformation(){
+
+    static void showInformation() {
         System.out.println("- The current Bitcoin rate, in the requested currency: " + bitcoinRateInRequestedCurrency);
         showCurrencyStatisticsData();
     }
 
-    static void showCurrencyStatisticsData(){
+    static void showCurrencyStatisticsData() {
         DoubleSummaryStatistics statistics = priceListForDateRange.stream()
                 .mapToDouble(Double::doubleValue)
                 .summaryStatistics();

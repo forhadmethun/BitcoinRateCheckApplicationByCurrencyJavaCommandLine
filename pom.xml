@@ -7,12 +7,18 @@
     <groupId>BitcoinRateCheckApplicationByCurrency</groupId>
     <artifactId>BitcoinRateCheckApplicationByCurrency</artifactId>
     <version>1.0-SNAPSHOT</version>
-    <!-- https://mvnrepository.com/artifact/org.json/json -->
     <dependencies>
+        <!-- for working with json data -->
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
             <version>20190722</version>
+        </dependency>
+        <dependency>
+        <!-- for unit testing -->
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <version>6.14.2</version>
         </dependency>
     </dependencies>
 
