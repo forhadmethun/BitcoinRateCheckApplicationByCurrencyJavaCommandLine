@@ -17,6 +17,8 @@ public class BitcoinRateCheckApplicationByCurrency {
     public static String currency = null;
     public static Double bitcoinRateInRequestedCurrency = null;
     public static List<Double> priceListForDateRange = null;
+    public static Double maxPriceInLasty30Days = null;
+    public static Double minPriceInLasty30Days = null;
 
 
     public static void main(String[] args) throws IOException {
@@ -64,12 +66,17 @@ public class BitcoinRateCheckApplicationByCurrency {
     }
 
     static void getInformationFromAPI() throws IOException {
+        parsePriceListFromJsonData();
+        DoubleSummaryStatistics statistics = priceListForDateRange.stream()
+                .mapToDouble(Double::doubleValue)
+                .summaryStatistics();
+        maxPriceInLasty30Days = statistics.getMax();
+        minPriceInLasty30Days = statistics.getMin();
 
-
+    }
+    static void parsePriceListFromJsonData() throws IOException {
         JSONObject bpiObject = (JSONObject) currencyPriceAPIResponse.get("bpi");
         JSONObject currencyDataObject = (JSONObject) bpiObject.get(currency);
-
-
         bitcoinRateInRequestedCurrency = (Double) currencyDataObject.get("rate_float");
         String apiDataRangeURL = urlBuilderToGetLast30DaysInformation();
         JSONObject lastOneMonthDataObject = APIUtil.getJSONAPIdataFromURL(apiDataRangeURL);
@@ -99,15 +106,10 @@ public class BitcoinRateCheckApplicationByCurrency {
 
     static void showInformation() {
         System.out.println("- The current Bitcoin rate, in the requested currency: " + bitcoinRateInRequestedCurrency);
-        showCurrencyStatisticsData();
+        System.out.println("- The lowest Bitcoin rate in the last 30 days, in the requested currency: " + minPriceInLasty30Days);
+        System.out.println("- The highest Bitcoin rate in the last 30 days, in the requested currency: " + maxPriceInLasty30Days);
+
     }
 
-    static void showCurrencyStatisticsData() {
-        DoubleSummaryStatistics statistics = priceListForDateRange.stream()
-                .mapToDouble(Double::doubleValue)
-                .summaryStatistics();
-        System.out.println("- The lowest Bitcoin rate in the last 30 days, in the requested currency: " + statistics.getMin());
-        System.out.println("- The highest Bitcoin rate in the last 30 days, in the requested currency: " + statistics.getMax());
-    }
 
 }
